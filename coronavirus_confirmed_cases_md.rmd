@@ -1,0 +1,24 @@
+---
+title: "COVID-19 trend analysis"
+author: Mattia Molinaro
+---
+In this notebook I will inspect the evolution of the number of people infected by the COVID-19. 
+```{r warning = FALSE, message=FALSE}
+## Loading the necessary libraries
+library( tidyverse)
+library( data.table)
+
+## Data loading and pre-processing
+confirmed = as.tbl( fread( "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_19-covid-Confirmed.csv")) # Downloading the data
+print( confirmed) # The data has wide format, whereby each date is represented by a column
+confirmed = confirmed %>% gather( Date, Confirmed_Cases, -(1:4)) # Melting the data, such that each row corresponds to one region/province in one day
+print( confirmed)
+confirmed = confirmed %>% mutate( Date = as.Date( Date, format = "%m/%d/%y")) # Casting strings to dates
+confirmed = confirmed %>% group_by( `Country/Region`, Date) %>% summarise( Confirmed_Cases = sum( Confirmed_Cases)) %>% ungroup() # Number of diseased people grouped by region and date
+
+confirmed = confirmed %>% rename( Country = `Country/Region`) %>% filter( Country != 'Others')
+temp = confirmed %>% filter( Date == max( Date)) %>% mutate( Position = dense_rank( desc( Confirmed_Cases))) %>% select( Country, Position)
+confirmed = confirmed %>% inner_join( temp, "Country") %>% filter( Position <= 5)
+confirmed = confirmed %>% mutate( Confirmed_Cases = ifelse( Confirmed_Cases == 0, 0.9, Confirmed_Cases)) %>% select( -Position)
+head( confirmed)
+```
